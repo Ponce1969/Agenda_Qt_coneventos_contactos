@@ -1,0 +1,122 @@
+/* Estilo general para todos los botones */
+QPushButton {
+    background-color: #90EE90;  /* Verde tenue */
+    border: 2px solid #78AB78;  /* Borde un poco más oscuro */
+    border-radius: 10px;        /* Bordes redondeados */
+    padding: 8px 16px;          /* Padding interno */
+    color: #2E562E;            /* Color del texto */
+    font-weight: bold;
+    min-height: 30px;
+    outline: none;
+}
+
+/* Estilo cuando el mouse está sobre el botón */
+QPushButton:hover {
+    background-color: #66CD66;  /* Verde más oscuro */
+    border-color: #4F9B4F;
+    color: #1E361E;
+}
+
+/* Estilo cuando el botón está presionado */
+QPushButton:pressed {
+    background-color: #4CAF50;  /* Verde aún más oscuro */
+    border-color: #45A049;
+    padding-left: 18px;
+    padding-top: 9px;
+}
+
+/* Estilo cuando el botón está deshabilitado */
+QPushButton:disabled {
+    background-color: #C8E6C9;  /* Verde muy claro */
+    border-color: #A5D6A7;
+    color: #75A478;
+}
+
+/* Estilo específico para botones de acción importante */
+QPushButton#btn_agregar {
+    background-color: #98FB98;  /* Verde un poco más brillante */
+}
+
+/* Estilo específico para botones de eliminación */
+QPushButton#btn_eliminar {
+    background-color: #F0FFF0;  /* Verde muy claro */
+}
+
+/* Estilo para el fondo de la ventana principal */
+QMainWindow {
+    background-color: #F5F5DC;  /* Beige */
+}
+
+/* Estilo para widgets de entrada */
+QLineEdit, QTimeEdit {
+    border: 2px solid #90EE90;
+    border-radius: 5px;
+    padding: 4px;
+    background-color: #E8F5E9;  /* Verde pálido */
+}
+
+QLineEdit:focus, QTimeEdit:focus {
+    border-color: #4CAF50;
+}
+
+/* Estilo para la tabla de eventos */
+QTableWidget {
+    border: 2px solid #90EE90;
+    border-radius: 5px;
+    background-color: white;
+    gridline-color: #E8F5E9;
+}
+
+QTableWidget::item:selected {
+    background-color: #C8E6C9;
+}
+
+QHeaderView::section {
+    background-color: #90EE90;
+    padding: 4px;
+    border: 1px solid #78AB78;
+    font-weight: bold;
+}
+
+/* Estilo para el calendario */
+QCalendarWidget {
+    border: 2px solid #90EE90;
+    border-radius: 5px;
+    background-color: #E8F5E9;  /* Verde pálido */
+}
+
+QCalendarWidget QToolButton {
+    background-color: #C8E6C9;  /* Verde claro */
+    border-radius: 5px;
+}
+
+QCalendarWidget QMenu {
+    background-color: rgb(159, 164, 241);
+    border: 1px solid #90EE90;
+}
+
+QCalendarWidget QSpinBox {
+    border: 1px solid #90EE90;
+    border-radius: 3px;
+}
+
+/* Estilo para los días seleccionados en el calendario */
+QCalendarWidget QWidget#qt_calendar_calendarview {
+    selection-background-color: #C8E6C9;  /* Verde claro */
+    selection-color: #2905c7;  /* Color del texto */
+}
+
+/* Estilo para la barra de herramientas del calendario (mes y año) */
+QCalendarWidget QToolButton#qt_calendar_prevmonth,
+QCalendarWidget QToolButton#qt_calendar_nextmonth,
+QCalendarWidget QToolButton#qt_calendar_monthbutton,
+QCalendarWidget QToolButton#qt_calendar_yearbutton {
+    background-color: #C8E6C9;  /* Verde claro */
+    border: none;
+    color: #577957;  /* Color del texto */
+}
+
+/* Estilo para el contenedor de la barra de herramientas del calendario */
+QCalendarWidget QWidget#qt_calendar_navigationbar {
+    background-color: #becebe;  /* Verde claro */
+}

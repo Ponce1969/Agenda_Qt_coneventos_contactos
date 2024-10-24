@@ -1,133 +1,153 @@
 import sys
+from datetime import datetime
+from dataclasses import dataclass
+from typing import List, Optional
 from PyQt6.QtWidgets import (
     QMainWindow, QVBoxLayout, QWidget, QMessageBox,
     QCalendarWidget, QTableWidget, QTableWidgetItem, 
     QPushButton, QFileDialog, QHBoxLayout, QTimeEdit, QLabel, 
-    QLineEdit, QSplitter, QInputDialog, QHeaderView
+    QSplitter, QInputDialog, QHeaderView
 )
-from PyQt6.QtCore import QDate, QTime, Qt
+from PyQt6.QtCore import QDate, QTime, Qt, pyqtSlot
 
+@dataclass
+class Evento:
+    fecha: str
+    hora: str
+    descripcion: str
 
 class AgendaApp(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.eventos: List[Evento] = []
+        self.initUI()
+        self.setupConnections()
 
-        # Configuración de la ventana principal
+    def initUI(self):
+        """Inicializa la interfaz de usuario"""
         self.setWindowTitle("Agenda de Reuniones y Eventos")
         self.setGeometry(100, 100, 800, 600)
+        self.setupCentralWidget()
+        self.setupLayouts()
+        self.setupCalendar()
+        self.setupTimeWidget()
+        self.setupEventTable()
+        self.setupButtons()
 
-        # Widget central
-        central_widget = QWidget(self)
-        self.setCentralWidget(central_widget)
+    def setupCentralWidget(self):
+        """Configura el widget central"""
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        self.main_layout = QHBoxLayout(self.central_widget)
 
-        # Layout principal horizontal
-        main_layout = QHBoxLayout(central_widget)
+    def setupLayouts(self):
+        """Configura los layouts principales"""
+        self.splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.main_layout.addWidget(self.splitter)
 
-        # Splitter para dividir el espacio
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        main_layout.addWidget(splitter)
+        # Widget izquierdo (80%)
+        self.left_widget = QWidget()
+        self.left_layout = QVBoxLayout(self.left_widget)
+        self.splitter.addWidget(self.left_widget)
+        self.splitter.setStretchFactor(0, 4)
 
-        # Layout izquierdo (80%)
-        left_widget = QWidget()
-        left_layout = QVBoxLayout(left_widget)
-        splitter.addWidget(left_widget)
-        splitter.setStretchFactor(0, 4)
+        # Widget derecho (20%)
+        self.right_widget = QWidget()
+        self.right_layout = QVBoxLayout(self.right_widget)
+        self.splitter.addWidget(self.right_widget)
+        self.splitter.setStretchFactor(1, 1)
 
-        # Layout derecho (20%)
-        right_widget = QWidget()
-        right_layout = QVBoxLayout(right_widget)
-        splitter.addWidget(right_widget)
-        splitter.setStretchFactor(1, 1)
-
-        # Widget calendario
-        self.calendar = QCalendarWidget(self)
+    def setupCalendar(self):
+        """Configura el widget de calendario"""
+        self.calendar = QCalendarWidget()
         self.calendar.setGridVisible(True)
-        self.calendar.clicked.connect(self.mostrar_fecha_seleccionada)
-
-        # Hora y Fecha
         self.label_fecha = QLabel("Fecha seleccionada: ")
-        self.time_edit = QTimeEdit(self)
+        self.left_layout.addWidget(self.calendar)
+        self.left_layout.addWidget(self.label_fecha)
+
+    def setupTimeWidget(self):
+        """Configura el widget de tiempo"""
+        self.time_edit = QTimeEdit()
         self.time_edit.setTime(QTime.currentTime())
+        self.left_layout.addWidget(QLabel("Hora:"))
+        self.left_layout.addWidget(self.time_edit)
 
-       
-
-        # Tabla para mostrar eventos
-        self.tabla_eventos = QTableWidget(self)
+    def setupEventTable(self):
+        """Configura la tabla de eventos"""
+        self.tabla_eventos = QTableWidget()
         self.tabla_eventos.setColumnCount(3)
         self.tabla_eventos.setHorizontalHeaderLabels(["Fecha", "Hora", "Evento"])
         
-        # Ajustar el tamaño de las columnas
         header = self.tabla_eventos.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents) 
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        
-        
-        # Añadir widgets al layout izquierdo
-        left_layout.addWidget(self.calendar)
-        left_layout.addWidget(self.label_fecha)
-        left_layout.addWidget(QLabel("Hora:"))
-        left_layout.addWidget(self.time_edit)
-        left_layout.addWidget(self.tabla_eventos)
 
-        # Botones para añadir, editar, eliminar eventos
-        self.btn_agregar = QPushButton("Agregar Evento", self)
-        self.btn_editar = QPushButton("Editar Evento", self)
-        self.btn_eliminar = QPushButton("Eliminar Evento", self)
+        self.left_layout.addWidget(self.tabla_eventos)
 
-        # Añadir botones al layout derecho
-        right_layout.addWidget(self.btn_agregar)
-        right_layout.addWidget(self.btn_editar)
-        right_layout.addWidget(self.btn_eliminar)
-        right_layout.addStretch()
+    def setupButtons(self):
+        """Configura los botones"""
+        self.btn_agregar = QPushButton("Agregar Evento")
+        self.btn_editar = QPushButton("Editar Evento")
+        self.btn_eliminar = QPushButton("Eliminar Evento")
 
-        # Conectar botones a métodos
+        self.right_layout.addWidget(self.btn_agregar)
+        self.right_layout.addWidget(self.btn_editar)
+        self.right_layout.addWidget(self.btn_eliminar)
+        self.right_layout.addStretch()
+
+    def setupConnections(self):
+        """Configura las conexiones de señales y slots"""
+        self.calendar.clicked.connect(self.mostrar_fecha_seleccionada)
         self.btn_agregar.clicked.connect(self.agregar_evento)
         self.btn_editar.clicked.connect(self.editar_evento)
         self.btn_eliminar.clicked.connect(self.eliminar_evento)
 
+    @pyqtSlot()
     def mostrar_fecha_seleccionada(self):
         fecha = self.calendar.selectedDate()
         self.label_fecha.setText(f"Fecha seleccionada: {fecha.toString('yyyy-MM-dd')}")
 
+    @pyqtSlot()
     def agregar_evento(self):
-        # Obtener la fecha y hora seleccionadas
         fecha = self.calendar.selectedDate().toString('yyyy-MM-dd')
         hora = self.time_edit.time().toString('HH:mm')
-
-        # Abrir un cuadro de diálogo para ingresar la descripción del evento
         evento, ok = QInputDialog.getText(self, "Agregar Evento", "Descripción del evento:")
         if ok and evento:
-            # Agregar el evento a la tabla
+            nuevo_evento = Evento(fecha, hora, evento)
+            self.eventos.append(nuevo_evento)
+            self.actualizar_tabla()
+
+    @pyqtSlot()
+    def editar_evento(self):
+        selected_row = self.tabla_eventos.currentRow()
+        if selected_row >= 0:
+            evento = self.eventos[selected_row]
+            nueva_descripcion, ok = QInputDialog.getText(self, "Editar Evento", "Descripción del evento:", text=evento.descripcion)
+            if ok and nueva_descripcion:
+                evento.descripcion = nueva_descripcion
+                self.actualizar_tabla()
+        else:
+            QMessageBox.warning(self, "Advertencia", "Selecciona un evento para editar")
+
+    @pyqtSlot()
+    def eliminar_evento(self):
+        selected_row = self.tabla_eventos.currentRow()
+        if selected_row >= 0:
+            del self.eventos[selected_row]
+            self.actualizar_tabla()
+        else:
+            QMessageBox.warning(self, "Advertencia", "Selecciona un evento para eliminar")
+
+    def actualizar_tabla(self):
+        """Actualiza la tabla de eventos"""
+        self.tabla_eventos.setRowCount(0)
+        for evento in self.eventos:
             row_position = self.tabla_eventos.rowCount()
             self.tabla_eventos.insertRow(row_position)
-            self.tabla_eventos.setItem(row_position, 0, QTableWidgetItem(fecha))
-            self.tabla_eventos.setItem(row_position, 1, QTableWidgetItem(hora))
-            self.tabla_eventos.setItem(row_position, 2, QTableWidgetItem(evento))
-
-    def editar_evento(self):
-        # Editar evento seleccionado en la tabla
-        selected_row = self.tabla_eventos.currentRow()
-        if selected_row >= 0:
-            fecha = self.tabla_eventos.item(selected_row, 0).text()
-            hora = self.tabla_eventos.item(selected_row, 1).text()
-            evento = self.tabla_eventos.item(selected_row, 2).text()
-
-            # Abrir un cuadro de diálogo para editar la descripción del evento
-            evento, ok = QInputDialog.getText(self, "Editar Evento", "Descripción del evento:", text=evento)
-            if ok and evento:
-                self.tabla_eventos.setItem(selected_row, 2, QTableWidgetItem(evento))
-        else:
-            # Mostrar una alerta si no hay un evento seleccionado
-            QMessageBox.warning(self, "Advertencia", "Selecciona un evento para editar")
-            
-
-    def eliminar_evento(self):
-        # Eliminar evento seleccionado en la tabla
-        selected_row = self.tabla_eventos.currentRow()
-        if selected_row >= 0:
-            self.tabla_eventos.removeRow(selected_row)
-
+            self.tabla_eventos.setItem(row_position, 0, QTableWidgetItem(evento.fecha))
+            self.tabla_eventos.setItem(row_position, 1, QTableWidgetItem(evento.hora))
+            self.tabla_eventos.setItem(row_position, 2, QTableWidgetItem(evento.descripcion))
    
 
 
