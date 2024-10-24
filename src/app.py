@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QSplitter, QInputDialog, QHeaderView
 )
 from PyQt6.QtCore import QDate, QTime, Qt, pyqtSlot
+from database import Database
 
 @dataclass
 class Evento:
@@ -17,11 +18,13 @@ class Evento:
     descripcion: str
 
 class AgendaApp(QMainWindow):
-    def __init__(self):
+    def __init__(self, db: Database):
         super().__init__()
+        self.db = db
         self.eventos: List[Evento] = []
         self.initUI()
         self.setupConnections()
+        self.cargar_eventos()
 
     def initUI(self):
         """Inicializa la interfaz de usuario"""
@@ -103,6 +106,13 @@ class AgendaApp(QMainWindow):
         self.btn_editar.clicked.connect(self.editar_evento)
         self.btn_eliminar.clicked.connect(self.eliminar_evento)
 
+    def cargar_eventos(self):
+        """Carga los eventos desde la base de datos"""
+        eventos_db = self.db.obtener_eventos()
+        for evento in eventos_db:
+            self.eventos.append(Evento(evento[1], evento[2], evento[3]))
+        self.actualizar_tabla()
+
     @pyqtSlot()
     def mostrar_fecha_seleccionada(self):
         fecha = self.calendar.selectedDate()
@@ -116,6 +126,7 @@ class AgendaApp(QMainWindow):
         if ok and evento:
             nuevo_evento = Evento(fecha, hora, evento)
             self.eventos.append(nuevo_evento)
+            self.db.agregar_evento(fecha, hora, evento)
             self.actualizar_tabla()
 
     @pyqtSlot()
@@ -126,6 +137,7 @@ class AgendaApp(QMainWindow):
             nueva_descripcion, ok = QInputDialog.getText(self, "Editar Evento", "Descripción del evento:", text=evento.descripcion)
             if ok and nueva_descripcion:
                 evento.descripcion = nueva_descripcion
+                self.db.editar_evento(evento_id=selected_row + 1, nueva_descripcion=nueva_descripcion)  # Asumiendo que el ID es el índice + 1
                 self.actualizar_tabla()
         else:
             QMessageBox.warning(self, "Advertencia", "Selecciona un evento para editar")
@@ -135,6 +147,7 @@ class AgendaApp(QMainWindow):
         selected_row = self.tabla_eventos.currentRow()
         if selected_row >= 0:
             del self.eventos[selected_row]
+            self.db.eliminar_evento(evento_id=selected_row + 1)  # Asumiendo que el ID es el índice + 1
             self.actualizar_tabla()
         else:
             QMessageBox.warning(self, "Advertencia", "Selecciona un evento para eliminar")

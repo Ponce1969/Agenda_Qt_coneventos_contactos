@@ -6,6 +6,7 @@ from logging.handlers import RotatingFileHandler
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
 from app import AgendaApp
+from database import Database  # Importar la clase Database
 
 def setup_logging():
     """
@@ -87,8 +88,13 @@ def main():
         # Crear y configurar la aplicación
         app = setup_application()
         
+        # Inicializar la base de datos
+        db_path = Path("/home/gonzapython/Documentos/Agenda_qt/base/agenda.db")
+        db_path.parent.mkdir(parents=True, exist_ok=True)  # Asegurarse de que el directorio existe
+        db = Database(db_path)
+        
         # Crear y mostrar la ventana principal
-        ventana = AgendaApp()
+        ventana = AgendaApp(db)  # Pasar la instancia de Database a AgendaApp
         ventana.show()
 
         # Ejecutar el loop principal de la aplicación

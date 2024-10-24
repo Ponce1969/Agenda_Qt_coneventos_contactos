@@ -88,6 +88,8 @@ QCalendarWidget {
 QCalendarWidget QToolButton {
     background-color: #C8E6C9;  /* Verde claro */
     border-radius: 5px;
+    padding: 5px;  /* Añadir padding para agrandar el botón */
+    margin: 2px;   /* Añadir margen para separar los botones */
 }
 
 QCalendarWidget QMenu {
@@ -103,7 +105,7 @@ QCalendarWidget QSpinBox {
 /* Estilo para los días seleccionados en el calendario */
 QCalendarWidget QWidget#qt_calendar_calendarview {
     selection-background-color: #C8E6C9;  /* Verde claro */
-    selection-color: #2905c7;  /* Color del texto */
+    selection-color: #3292eb;  /* Color del texto */
 }
 
 /* Estilo para la barra de herramientas del calendario (mes y año) */
@@ -113,10 +115,12 @@ QCalendarWidget QToolButton#qt_calendar_monthbutton,
 QCalendarWidget QToolButton#qt_calendar_yearbutton {
     background-color: #C8E6C9;  /* Verde claro */
     border: none;
-    color: #577957;  /* Color del texto */
+    color: #2E562E;  /* Color del texto */
+    padding: 5px;  /* Añadir padding para agrandar el botón */
+    margin: 2px;   /* Añadir margen para separar los botones */
 }
 
 /* Estilo para el contenedor de la barra de herramientas del calendario */
 QCalendarWidget QWidget#qt_calendar_navigationbar {
-    background-color: #becebe;  /* Verde claro */
+    background-color: #C8E6C9;  /* Verde claro */
 }
