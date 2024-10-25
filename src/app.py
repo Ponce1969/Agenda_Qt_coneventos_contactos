@@ -6,15 +6,17 @@ from PyQt6.QtWidgets import (
     QMainWindow, QVBoxLayout, QWidget, QMessageBox,
     QCalendarWidget, QTableWidget, QTableWidgetItem, 
     QPushButton, QFileDialog, QHBoxLayout, QTimeEdit, QLabel, 
-    QSplitter, QInputDialog, QHeaderView
+    QSplitter, QInputDialog, QHeaderView, QFormLayout
 )
 from PyQt6.QtCore import QDate, QTime, Qt, pyqtSlot
 from database import Database
+from alarma import Alarma  # Importar la clase Alarma
+from ui_components import UIComponents  # Importar la clase UIComponents
 
 @dataclass
 class Evento:
-    fecha: str
-    hora: str
+    id: int  # Añadir un campo ID para identificar el evento en la base de datos
+    fecha_hora: datetime
     descripcion: str
 
 class AgendaApp(QMainWindow):
@@ -22,9 +24,11 @@ class AgendaApp(QMainWindow):
         super().__init__()
         self.db = db
         self.eventos: List[Evento] = []
-        self.initUI()
+        self.ui_components = UIComponents(self)  # Instanciar UIComponents
+        self.initUI()  # Asegúrate de que este método esté definido
         self.setupConnections()
         self.cargar_eventos()
+        self.alarma = Alarma(self)  # Inicializar la alarma
 
     def initUI(self):
         """Inicializa la interfaz de usuario"""
@@ -32,10 +36,9 @@ class AgendaApp(QMainWindow):
         self.setGeometry(100, 100, 800, 600)
         self.setupCentralWidget()
         self.setupLayouts()
-        self.setupCalendar()
-        self.setupTimeWidget()
-        self.setupEventTable()
-        self.setupButtons()
+        self.calendar, self.label_fecha = self.ui_components.setupCalendar(self.left_layout)
+        self.tabla_eventos = self.ui_components.setupEventTable(self.left_layout)
+        self.btn_agregar, self.btn_editar, self.btn_eliminar, self.btn_alarma = self.ui_components.setupButtons(self.right_layout)
 
     def setupCentralWidget(self):
         """Configura el widget central"""
@@ -60,63 +63,58 @@ class AgendaApp(QMainWindow):
         self.splitter.addWidget(self.right_widget)
         self.splitter.setStretchFactor(1, 1)
 
-    def setupCalendar(self):
-        """Configura el widget de calendario"""
-        self.calendar = QCalendarWidget()
-        self.calendar.setGridVisible(True)
-        self.label_fecha = QLabel("Fecha seleccionada: ")
-        self.left_layout.addWidget(self.calendar)
-        self.left_layout.addWidget(self.label_fecha)
-
-    def setupTimeWidget(self):
-        """Configura el widget de tiempo"""
-        self.time_edit = QTimeEdit()
-        self.time_edit.setTime(QTime.currentTime())
-        self.left_layout.addWidget(QLabel("Hora:"))
-        self.left_layout.addWidget(self.time_edit)
-
-    def setupEventTable(self):
-        """Configura la tabla de eventos"""
-        self.tabla_eventos = QTableWidget()
-        self.tabla_eventos.setColumnCount(3)
-        self.tabla_eventos.setHorizontalHeaderLabels(["Fecha", "Hora", "Evento"])
-        
-        header = self.tabla_eventos.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-
-        self.left_layout.addWidget(self.tabla_eventos)
-
-    def setupButtons(self):
-        """Configura los botones"""
-        self.btn_agregar = QPushButton("Agregar Evento")
-        self.btn_editar = QPushButton("Editar Evento")
-        self.btn_eliminar = QPushButton("Eliminar Evento")
-
-        self.right_layout.addWidget(self.btn_agregar)
-        self.right_layout.addWidget(self.btn_editar)
-        self.right_layout.addWidget(self.btn_eliminar)
-        self.right_layout.addStretch()
-
     def setupConnections(self):
         """Configura las conexiones de señales y slots"""
         self.calendar.clicked.connect(self.mostrar_fecha_seleccionada)
         self.btn_agregar.clicked.connect(self.agregar_evento)
         self.btn_editar.clicked.connect(self.editar_evento)
         self.btn_eliminar.clicked.connect(self.eliminar_evento)
+        self.btn_alarma.clicked.connect(self.mostrar_alarma)  # Conectar el botón de alarma
 
     def cargar_eventos(self):
         """Carga los eventos desde la base de datos"""
         eventos_db = self.db.obtener_eventos()
+        self.eventos.clear()  # Limpiar la lista de eventos antes de cargar
         for evento in eventos_db:
-            self.eventos.append(Evento(evento[1], evento[2], evento[3]))
-        self.actualizar_tabla()
+            fecha_hora = datetime.strptime(evento[1], '%Y-%m-%d %H:%M:%S')
+            self.eventos.append(Evento(evento[0], fecha_hora, evento[2]))  # Incluir el ID del evento
+        self.ui_components.actualizarTablaEventos(self.tabla_eventos, self.eventos)
+
+    def validar_fecha_hora(self, fecha: str, hora: str) -> Optional[datetime]:
+        """Valida el formato de fecha y hora"""
+        try:
+            fecha_hora_valida = datetime.strptime(f"{fecha} {hora}", '%Y-%m-%d %H:%M')
+            if fecha_hora_valida < datetime.now():
+                QMessageBox.warning(self, "Advertencia", "No puedes agregar eventos en el pasado.")
+                return None
+            return fecha_hora_valida
+        except ValueError:
+            QMessageBox.warning(self, "Advertencia", "Formato de fecha o hora no válido.")
+            return None
+
+    def actualizar_evento(self, evento: Evento):
+        """Actualiza un evento en la base de datos y en la tabla"""
+        try:
+            self.db.editar_evento_completo(evento_id=evento.id, nueva_fecha_hora=evento.fecha_hora, nueva_descripcion=evento.descripcion)
+            self.ui_components.actualizarTablaEventos(self.tabla_eventos, self.eventos)
+            self.alarma.actualizar_lista_tareas()  # Actualizar la lista de tareas en la alarma
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Ocurrió un error al actualizar el evento: {str(e)}")
+
+    def actualizar_tabla_inmediata(self, evento: Evento, accion: str):
+        """Actualiza la tabla de eventos inmediatamente"""
+        if accion == "agregar":
+            row_position = self.tabla_eventos.rowCount()
+            self.tabla_eventos.insertRow(row_position)
+            self.tabla_eventos.setItem(row_position, 0, QTableWidgetItem(evento.fecha_hora.strftime('%Y-%m-%d')))
+            self.tabla_eventos.setItem(row_position, 1, QTableWidgetItem(evento.fecha_hora.strftime('%H:%M')))
+            self.tabla_eventos.setItem(row_position, 2, QTableWidgetItem(evento.descripcion))
+        elif accion == "eliminar":
+            self.tabla_eventos.removeRow(self.tabla_eventos.currentRow())
 
     @pyqtSlot()
     def mostrar_fecha_seleccionada(self):
-        fecha = self.calendar.selectedDate()
-        self.label_fecha.setText(f"Fecha seleccionada: {fecha.toString('yyyy-MM-dd')}")
+        self.ui_components.seleccionarFecha(self.calendar, self.label_fecha)
 
     @pyqtSlot()
     def agregar_evento(self):
@@ -124,21 +122,37 @@ class AgendaApp(QMainWindow):
         hora = self.time_edit.time().toString('HH:mm')
         evento, ok = QInputDialog.getText(self, "Agregar Evento", "Descripción del evento:")
         if ok and evento:
-            nuevo_evento = Evento(fecha, hora, evento)
-            self.eventos.append(nuevo_evento)
-            self.db.agregar_evento(fecha, hora, evento)
-            self.actualizar_tabla()
+            fecha_hora_valida = self.validar_fecha_hora(fecha, hora)
+            if fecha_hora_valida is None:
+                return
+            try:
+                self.db.agregar_evento(fecha, hora, evento)
+                nuevo_evento_id = self.db.obtener_eventos()[-1][0]
+                nuevo_evento = Evento(nuevo_evento_id, fecha_hora_valida, evento)
+                self.eventos.append(nuevo_evento)
+                self.actualizar_tabla_inmediata(nuevo_evento, "agregar")
+                self.alarma.actualizar_lista_tareas()  # Actualizar la lista de tareas en la alarma
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Ocurrió un error al agregar el evento: {str(e)}")
 
     @pyqtSlot()
     def editar_evento(self):
         selected_row = self.tabla_eventos.currentRow()
         if selected_row >= 0:
             evento = self.eventos[selected_row]
-            nueva_descripcion, ok = QInputDialog.getText(self, "Editar Evento", "Descripción del evento:", text=evento.descripcion)
-            if ok and nueva_descripcion:
+            
+            # Crear diálogos para editar la fecha, hora y descripción
+            nueva_fecha, ok_fecha = QInputDialog.getText(self, "Editar Fecha", "Fecha del evento (yyyy-MM-dd):", text=evento.fecha_hora.strftime('%Y-%m-%d'))
+            nueva_hora, ok_hora = QInputDialog.getText(self, "Editar Hora", "Hora del evento (HH:mm):", text=evento.fecha_hora.strftime('%H:%M'))
+            nueva_descripcion, ok_desc = QInputDialog.getText(self, "Editar Evento", "Descripción del evento:", text=evento.descripcion)
+            
+            if ok_fecha and ok_hora and ok_desc:
+                fecha_hora_valida = self.validar_fecha_hora(nueva_fecha, nueva_hora)
+                if fecha_hora_valida is None:
+                    return
+                evento.fecha_hora = fecha_hora_valida
                 evento.descripcion = nueva_descripcion
-                self.db.editar_evento(evento_id=selected_row + 1, nueva_descripcion=nueva_descripcion)  # Asumiendo que el ID es el índice + 1
-                self.actualizar_tabla()
+                self.actualizar_evento(evento)
         else:
             QMessageBox.warning(self, "Advertencia", "Selecciona un evento para editar")
 
@@ -146,21 +160,27 @@ class AgendaApp(QMainWindow):
     def eliminar_evento(self):
         selected_row = self.tabla_eventos.currentRow()
         if selected_row >= 0:
-            del self.eventos[selected_row]
-            self.db.eliminar_evento(evento_id=selected_row + 1)  # Asumiendo que el ID es el índice + 1
-            self.actualizar_tabla()
+            # Confirmación antes de eliminar
+            respuesta = QMessageBox.question(self, "Confirmación", "¿Estás seguro de que deseas eliminar este evento?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if respuesta == QMessageBox.StandardButton.Yes:
+                evento = self.eventos[selected_row]
+                try:
+                    self.db.eliminar_evento(evento_id=evento.id)  # Eliminar de la base de datos
+                    del self.eventos[selected_row]  # Eliminar de la lista de eventos
+                    self.actualizar_tabla_inmediata(evento, "eliminar")
+                    self.alarma.actualizar_lista_tareas()  # Actualizar la lista de tareas en la alarma
+                except Exception as e:
+                    QMessageBox.critical(self, "Error", f"Ocurrió un error al eliminar el evento: {str(e)}")
         else:
             QMessageBox.warning(self, "Advertencia", "Selecciona un evento para eliminar")
 
+    @pyqtSlot()
+    def mostrar_alarma(self):
+        self.alarma.show()
+
     def actualizar_tabla(self):
         """Actualiza la tabla de eventos"""
-        self.tabla_eventos.setRowCount(0)
-        for evento in self.eventos:
-            row_position = self.tabla_eventos.rowCount()
-            self.tabla_eventos.insertRow(row_position)
-            self.tabla_eventos.setItem(row_position, 0, QTableWidgetItem(evento.fecha))
-            self.tabla_eventos.setItem(row_position, 1, QTableWidgetItem(evento.hora))
-            self.tabla_eventos.setItem(row_position, 2, QTableWidgetItem(evento.descripcion))
+        self.ui_components.actualizarTablaEventos(self.tabla_eventos, self.eventos)
    
 
 

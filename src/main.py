@@ -21,11 +21,11 @@ def setup_logging():
     
     # Configurar el logger
     logger = logging.getLogger()
-    logger.setLevel(logging.ERROR)  # Solo registrar errores
+    logger.setLevel(logging.INFO)  # Cambiar a INFO para registrar más detalles
     
     # Formato del log
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'  # Corregir 'levellevel' a 'levelname'
     )
     
     # Configurar RotatingFileHandler para mantener máximo 5 archivos
@@ -35,12 +35,12 @@ def setup_logging():
         maxBytes=5*1024*1024,  # 5MB por archivo
         backupCount=4  # Mantener 4 backups (5 archivos en total)
     )
-    file_handler.setLevel(logging.ERROR)
+    file_handler.setLevel(logging.INFO)  # Cambiar a INFO para registrar más detalles
     file_handler.setFormatter(formatter)
     
     # Configurar StreamHandler para la consola (opcional)
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.ERROR)
+    console_handler.setLevel(logging.INFO)  # Cambiar a INFO para registrar más detalles
     console_handler.setFormatter(formatter)
     
     # Limpiar handlers existentes y agregar los nuevos
