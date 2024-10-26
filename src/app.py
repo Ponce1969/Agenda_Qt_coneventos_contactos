@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QSplitter, QInputDialog, QHeaderView, QFormLayout
 )
 from PyQt6.QtCore import QDate, QTime, Qt, pyqtSlot
+from PyQt6.QtGui import QIcon  # Importar QIcon
 from database import Database
 from alarma import Alarma  # Importar la clase Alarma
 from ui_components import UIComponents  # Importar la clase UIComponents
@@ -34,6 +35,7 @@ class AgendaApp(QMainWindow):
         """Inicializa la interfaz de usuario"""
         self.setWindowTitle("Agenda de Reuniones y Eventos")
         self.setGeometry(100, 100, 800, 600)
+        self.setWindowIcon(QIcon("/home/gonzapython/Documentos/Agenda_qt/iconos/book.png"))  # Configurar el icono de la ventana
         self.setupCentralWidget()
         self.setupLayouts()
         self.calendar, self.label_fecha = self.ui_components.setupCalendar(self.left_layout)

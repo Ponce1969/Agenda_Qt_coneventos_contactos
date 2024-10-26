@@ -36,37 +36,38 @@ class Alarma(QDialog):
         self.timer.start(60000)  # Verifica cada 60 segundos (1 minuto)
     
     def verificar_alarma(self):
-        """Verifica si hay algún evento próximo y muestra las notificaciones o reproduce la alarma."""
+        """Verifica si hay algún evento próximo y muestra las notificaciones en una ventana emergente y reproduce alarma wav."""
         ahora = QDateTime.currentDateTime().toPyDateTime()  # Obtener la hora actual como objeto datetime
         
         for evento in self.parent.eventos:
             evento_fecha_hora = evento.fecha_hora  # Usar el atributo fecha_hora directamente
             diferencia = evento_fecha_hora - ahora
 
-            # Comprobar si queda 1 hora para el evento
+            # Comprobar si queda 1 hora para el evento y reproducir la alarma
             if timedelta(minutes=59) < diferencia <= timedelta(hours=1):
                 self.mostrar_aviso(f"Queda 1 hora para tu evento: {evento.descripcion}")
+                self.reproducir_alarma()
             
             # Comprobar si queda 15 minutos para el evento
             elif timedelta(minutes=14) < diferencia <= timedelta(minutes=15):
                 self.mostrar_aviso(f"Quedan 15 minutos para tu evento: {evento.descripcion}")
             
-            # Comprobar si es la hora del evento y reproducir la alarma
+            # Comprobar si es la hora del evento
             elif timedelta(seconds=0) <= diferencia <= timedelta(minutes=1):
-                self.reproducir_alarma(evento.descripcion)
+                self.mostrar_aviso(f"Es la hora del evento: {evento.descripcion}")
     
     def mostrar_aviso(self, mensaje):
         """Muestra una advertencia con un mensaje."""
-        logging.info(f"Mostrando aviso: {mensaje}")
+        # logging.info(f"Mostrando aviso: {mensaje}")
         QMessageBox.warning(self, "Recordatorio de Evento", mensaje, QMessageBox.StandardButton.Ok)
 
     def reproducir_alarma(self, descripcion_evento):
         """Reproduce el sonido de la alarma y muestra un aviso."""
-        logging.info(f"Reproduciendo alarma para el evento: {descripcion_evento}")
+        # logging.info(f"Reproduciendo alarma para el evento: {descripcion_evento}")
         try:
             playsound(self.sonido_alarma)  # Reproducir sonido de la alarma
         except Exception as e:
-            logging.error(f"Error al reproducir el sonido de la alarma: {e}")
+            # logging.error(f"Error al reproducir el sonido de la alarma: {e}")
             QMessageBox.warning(self, "Error", "No se pudo reproducir el sonido de la alarma.")
         
         QMessageBox.information(self, "Alarma de Evento", f"Es la hora del evento: {descripcion_evento}", QMessageBox.StandardButton.Ok)
