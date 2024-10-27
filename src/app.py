@@ -41,6 +41,13 @@ class AgendaApp(QMainWindow):
         self.calendar, self.label_fecha = self.ui_components.setupCalendar(self.left_layout)
         self.tabla_eventos = self.ui_components.setupEventTable(self.left_layout)
         self.btn_agregar, self.btn_editar, self.btn_eliminar, self.btn_alarma = self.ui_components.setupButtons(self.right_layout)
+        
+        # Definir e inicializar time_edit
+        self.time_edit = QTimeEdit()
+        self.time_edit.setDisplayFormat("HH:mm")  # Configurar formato de 24 horas
+        self.time_edit.setTime(QTime.currentTime())
+        self.left_layout.addWidget(QLabel("Hora:"))
+        self.left_layout.addWidget(self.time_edit)
 
     def setupCentralWidget(self):
         """Configura el widget central"""
@@ -183,6 +190,5 @@ class AgendaApp(QMainWindow):
     def actualizar_tabla(self):
         """Actualiza la tabla de eventos"""
         self.ui_components.actualizarTablaEventos(self.tabla_eventos, self.eventos)
-   
 
 
