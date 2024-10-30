@@ -6,13 +6,14 @@ from PyQt6.QtWidgets import (
     QMainWindow, QVBoxLayout, QWidget, QMessageBox,
     QCalendarWidget, QTableWidget, QTableWidgetItem, 
     QPushButton, QFileDialog, QHBoxLayout, QTimeEdit, QLabel, 
-    QSplitter, QInputDialog, QHeaderView, QFormLayout
+    QSplitter, QInputDialog, QHeaderView, QFormLayout, QToolBar
 )
 from PyQt6.QtCore import QDate, QTime, Qt, pyqtSlot
-from PyQt6.QtGui import QIcon  # Importar QIcon
+from PyQt6.QtGui import QIcon, QAction  # Importar QIcon y QAction desde PyQt6.QtGui
 from database import Database
 from alarma import Alarma  # Importar la clase Alarma
 from ui_components import UIComponents  # Importar la clase UIComponents
+from contactos import ContactosWindow  # Importar la clase ContactosWindow
 
 @dataclass
 class Evento:
@@ -31,6 +32,9 @@ class AgendaApp(QMainWindow):
         self.cargar_eventos()
         self.alarma = Alarma(self)  # Inicializar la alarma
 
+        # Cargar y aplicar el archivo QSS
+        self.apply_stylesheet()
+
     def initUI(self):
         """Inicializa la interfaz de usuario"""
         self.setWindowTitle("Agenda de Reuniones y Eventos")
@@ -48,6 +52,27 @@ class AgendaApp(QMainWindow):
         self.time_edit.setTime(QTime.currentTime())
         self.left_layout.addWidget(QLabel("Hora:"))
         self.left_layout.addWidget(self.time_edit)
+
+        # Crear la barra de herramientas
+        self.toolbar = QToolBar("Barra de Herramientas")
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolbar)
+        
+        # Añadir el botón de contactos a la barra de herramientas
+        self.btn_contactos = QPushButton("Contactos")
+        self.btn_contactos.clicked.connect(self.mostrar_contactos)
+        self.toolbar.addWidget(self.btn_contactos)
+
+        # Crear una barra de herramientas adicional para el botón de mostrar/ocultar
+        self.toggle_toolbar = QToolBar("Toggle Toolbar")
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toggle_toolbar)
+
+        # Añadir un botón de icono para mostrar/ocultar la barra de herramientas
+        self.toggle_toolbar_button = QPushButton()
+        self.toggle_toolbar_button.setIcon(QIcon("/home/gonzapython/Documentos/Agenda_qt/iconos/tool_icon.png"))  # Asegúrate de que esta ruta sea correcta
+        self.toggle_toolbar_button.setFixedSize(24, 24)
+        self.toggle_toolbar_button.setStyleSheet("border: none;")
+        self.toggle_toolbar_button.clicked.connect(self.toggle_toolbar_visibility)
+        self.toggle_toolbar.addWidget(self.toggle_toolbar_button)
 
     def setupCentralWidget(self):
         """Configura el widget central"""
@@ -187,8 +212,25 @@ class AgendaApp(QMainWindow):
     def mostrar_alarma(self):
         self.alarma.show()
 
+    @pyqtSlot()
+    def mostrar_contactos(self):
+        self.contactos_window = ContactosWindow(self.db)
+        self.contactos_window.exec()  # Cambiar de show() a exec() para hacer la ventana modal
+
     def actualizar_tabla(self):
         """Actualiza la tabla de eventos"""
         self.ui_components.actualizarTablaEventos(self.tabla_eventos, self.eventos)
 
+    def apply_stylesheet(self):
+        """Carga y aplica el archivo QSS"""
+        with open("/home/gonzapython/Documentos/Agenda_qt/styles/styles.qss", "r") as file:
+            self.setStyleSheet(file.read())
+
+    @pyqtSlot()
+    def toggle_toolbar_visibility(self):
+        """Muestra u oculta la barra de herramientas"""
+        if self.toolbar.isVisible():
+            self.toolbar.hide()
+        else:
+            self.toolbar.show()
 
