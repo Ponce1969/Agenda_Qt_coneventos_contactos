@@ -31,4 +31,4 @@ dist/
 build/
 
 # Ignorar archivo de base de datos
-agenda.db
+base/agenda.db
