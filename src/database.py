@@ -23,6 +23,15 @@ class Database:
                     documento TEXT
                 )
             """)
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS compras (
+                    id INTEGER PRIMARY KEY,
+                    nombre TEXT,
+                    cantidad TEXT,
+                    precio TEXT
+                )
+            """)
+
 
     def obtener_eventos(self):
         with self.conn:
@@ -61,9 +70,26 @@ class Database:
             result = self.conn.execute("SELECT * FROM contactos WHERE email = ? OR documento = ?", (email, documento)).fetchone()
             return result is not None
     
+    def obtener_compras(self):
+        with self.conn:
+            return self.conn.execute("SELECT * FROM compras").fetchall()
+
+    def agregar_compra(self, nombre, cantidad, precio):
+        with self.conn:
+            self.conn.execute("INSERT INTO compras (nombre, cantidad, precio) VALUES (?, ?, ?)", (nombre, cantidad, precio))
+
+    def editar_compra(self, compra_id, nombre, cantidad, precio):
+        with self.conn:
+            self.conn.execute("UPDATE compras SET nombre = ?, cantidad = ?, precio = ? WHERE id = ?", (nombre, cantidad, precio, compra_id))
+
+    def eliminar_compra(self, compra_id):
+        with self.conn:
+            self.conn.execute("DELETE FROM compras WHERE id = ?", (compra_id,))    
         
-        
-        
+    def compra_duplicada(self, nombre):
+        with self.conn:
+            result = self.conn.execute("SELECT * FROM compras WHERE nombre = ?", (nombre,)).fetchone()
+            return result is not None    
 
 
 
