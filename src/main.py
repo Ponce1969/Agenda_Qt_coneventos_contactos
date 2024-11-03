@@ -3,10 +3,12 @@ import logging
 import os
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QDialog
 from PyQt6.QtCore import Qt
 from app import AgendaApp
-from database import Database  # Importar la clase Database
+from models.database import Database  # Importar la clase Database
+from auth.login import LoginWindow  # Importar la clase LoginWindow
+from auth.register import RegisterWindow  # Importar la clase RegisterWindow
 
 def setup_logging():
     """
@@ -93,12 +95,31 @@ def main():
         db_path.parent.mkdir(parents=True, exist_ok=True)  # Asegurarse de que el directorio existe
         db = Database(db_path)
         
-        # Crear y mostrar la ventana principal
-        ventana = AgendaApp(db)  # Pasar la instancia de Database a AgendaApp
-        ventana.show()
-
-        # Ejecutar el loop principal de la aplicación
-        sys.exit(app.exec())
+        # Verificar si hay usuarios en la base de datos
+        if not db.hay_usuarios():
+            # Mostrar la ventana de registro
+            register_window = RegisterWindow(db)
+            if register_window.exec() == QDialog.DialogCode.Accepted:
+                # Obtener el usuario registrado
+                user = db.verificar_usuario(register_window.username_input.text(), register_window.password_input.text())
+                # Crear y mostrar la ventana principal
+                ventana = AgendaApp(db, user)
+                ventana.show()
+                sys.exit(app.exec())
+            else:
+                sys.exit(0)
+        else:
+            # Mostrar la ventana de login
+            login_window = LoginWindow(db)
+            if login_window.exec() == QDialog.DialogCode.Accepted:
+                # Obtener el usuario autenticado
+                user = db.verificar_usuario(login_window.username_input.text(), login_window.password_input.text())
+                # Crear y mostrar la ventana principal
+                ventana = AgendaApp(db, user)
+                ventana.show()
+                sys.exit(app.exec())
+            else:
+                sys.exit(0)
 
     except Exception as e:
         logger.error(f"Error crítico en la aplicación: {str(e)}", exc_info=True)

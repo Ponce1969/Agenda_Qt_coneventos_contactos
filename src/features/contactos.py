@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QRegularExpression
 from PyQt6.QtGui import QRegularExpressionValidator
 import re
-from database import Database
+from models.database import Database
 
 class ContactosWindow(QDialog):
     def __init__(self, db: Database):

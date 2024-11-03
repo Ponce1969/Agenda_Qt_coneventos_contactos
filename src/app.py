@@ -9,17 +9,18 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import QDate, QTime, Qt, pyqtSlot
 from PyQt6.QtGui import QIcon
-from database import Database
-from alarma import Alarma
-from ui_components import UIComponents
-from contactos import ContactosWindow
-from models import Evento  # Importar la clase Evento desde models.py
-from compras import ComprasWindow  # Importar la clase ComprasWindow
+from models.database import Database
+from features.alarma import Alarma
+from ui.ui_components import UIComponents # Importar la clase UIComponents desde ui_components.py
+from features.contactos import ContactosWindow
+from models.models import Evento             # Importar la clase Evento desde models.py
+from features.compras import ComprasWindow  # Importar la clase ComprasWindow
 
 class AgendaApp(QMainWindow):
-    def __init__(self, db: Database):
+    def __init__(self, db: Database, user):
         super().__init__()
         self.db = db
+        self.user = user  # Guardar el usuario actual
         self.eventos: List[Evento] = []
         self.ui_components = UIComponents(self)
         self.initUI()
@@ -40,6 +41,10 @@ class AgendaApp(QMainWindow):
         self.calendar, self.label_fecha = self.ui_components.setupCalendar(self.left_layout)
         self.tabla_eventos = self.ui_components.setupEventTable(self.left_layout)
         self.btn_agregar, self.btn_editar, self.btn_eliminar, self.btn_alarma = self.ui_components.setupButtons(self.right_layout)
+        
+        # Deshabilitar el botón de eliminar si el usuario no es administrador
+        if self.user[4] != 'admin':
+            self.btn_eliminar.setDisabled(True)
         
         # Definir e inicializar time_edit
         self.time_edit = QTimeEdit()

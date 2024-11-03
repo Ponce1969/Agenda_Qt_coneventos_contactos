@@ -1,4 +1,6 @@
 import sqlite3
+from werkzeug.security import generate_password_hash, check_password_hash
+import secrets
 
 class Database:
     def __init__(self, db_path):
@@ -31,7 +33,66 @@ class Database:
                     precio TEXT
                 )
             """)
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS usuarios (
+                    id INTEGER PRIMARY KEY,
+                    username TEXT UNIQUE,
+                    password TEXT,
+                    email TEXT,
+                    role TEXT
+                )
+            """)
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS password_resets (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER,
+                    token TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
 
+    def agregar_usuario(self, username, password, email, role):
+        hashed_password = generate_password_hash(password)
+        with self.conn:
+            self.conn.execute("INSERT INTO usuarios (username, password, email, role) VALUES (?, ?, ?, ?)", (username, hashed_password, email, role))
+
+    def verificar_usuario(self, username, password):
+        with self.conn:
+            user = self.conn.execute("SELECT * FROM usuarios WHERE username = ?", (username,)).fetchone()
+            if user and check_password_hash(user[2], password):
+                return user
+            return None
+
+    def generar_token_recuperacion(self, email):
+        with self.conn:
+            user = self.conn.execute("SELECT * FROM usuarios WHERE email = ?", (email,)).fetchone()
+            if user:
+                token = secrets.token_urlsafe()
+                self.conn.execute("INSERT INTO password_resets (user_id, token) VALUES (?, ?)", (user[0], token))
+                return token
+            return None
+
+    def verificar_token_recuperacion(self, token):
+        with self.conn:
+            reset = self.conn.execute("SELECT * FROM password_resets WHERE token = ?", (token,)).fetchone()
+            if reset:
+                return reset
+            return None
+    
+    def hay_usuarios(self):
+        with self.conn:
+            result = self.conn.execute("SELECT COUNT(*) FROM usuarios").fetchone()
+            return result[0] > 0
+
+
+    def cambiar_contrasena(self, user_id, new_password):
+        hashed_password = generate_password_hash(new_password)
+        with self.conn:
+            self.conn.execute("UPDATE usuarios SET password = ? WHERE id = ?", (hashed_password, user_id))
+
+    def eliminar_usuario(self, user_id):
+        with self.conn:
+            self.conn.execute("DELETE FROM usuarios WHERE id = ?", (user_id,))
 
     def obtener_eventos(self):
         with self.conn:
@@ -90,7 +151,5 @@ class Database:
         with self.conn:
             result = self.conn.execute("SELECT * FROM compras WHERE nombre = ?", (nombre,)).fetchone()
             return result is not None    
-
-
 
 

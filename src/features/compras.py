@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHBoxLayout, QMessageBox
 )
 from PyQt6.QtCore import Qt
-from database import Database
+from models.database import Database
 
 class ComprasWindow(QDialog):
     def __init__(self, db: Database):
