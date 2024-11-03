@@ -1,16 +1,2 @@
 
-2024-10-27 21:49:55,892 - root - ERROR - Error crítico en la aplicación: arguments did not match any overloaded call:
-  addToolBar(self, area: Qt.ToolBarArea, toolbar: Optional[QToolBar]): argument 2 has unexpected type 'QWidgetAction'
-  addToolBar(self, toolbar: Optional[QToolBar]): argument 1 has unexpected type 'ToolBarArea'
-  addToolBar(self, title: Optional[str]): argument 1 has unexpected type 'ToolBarArea'
-Traceback (most recent call last):
-  File "/home/gonzapython/Documentos/Agenda_qt/src/main.py", line 97, in main
-    ventana = AgendaApp(db)  # Pasar la instancia de Database a AgendaApp
-  File "/home/gonzapython/Documentos/Agenda_qt/src/app.py", line 30, in __init__
-    self.initUI()  # Asegúrate de que este método esté definido
-  File "/home/gonzapython/Documentos/Agenda_qt/src/app.py", line 73, in initUI
-    self.addToolBar(Qt.ToolBarArea.TopToolBarArea, QToolBar().addWidget(self.toggle_toolbar_button))
-TypeError: arguments did not match any overloaded call:
-  addToolBar(self, area: Qt.ToolBarArea, toolbar: Optional[QToolBar]): argument 2 has unexpected type 'QWidgetAction'
-  addToolBar(self, toolbar: Optional[QToolBar]): argument 1 has unexpected type 'ToolBarArea'
-  addToolBar(self, title: Optional[str]): argument 1 has unexpected type 'ToolBarArea'
+
