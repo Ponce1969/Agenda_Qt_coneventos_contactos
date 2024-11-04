@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, 
-    QTableWidget, QTableWidgetItem, QMessageBox, QInputDialog
+    QTableWidget, QTableWidgetItem, QMessageBox, QInputDialog, QHBoxLayout, QComboBox
 )
 from models.database import Database
 
@@ -8,6 +8,7 @@ class GestionarUsuariosWindow(QDialog):
     def __init__(self, db: Database):
         super().__init__()
         self.db = db
+        self.usuarios = []  # Lista para almacenar los usuarios
         self.initUI()
 
     def initUI(self):
@@ -18,8 +19,8 @@ class GestionarUsuariosWindow(QDialog):
         
         # Tabla de usuarios
         self.tabla_usuarios = QTableWidget()
-        self.tabla_usuarios.setColumnCount(4)
-        self.tabla_usuarios.setHorizontalHeaderLabels(["ID", "Username", "Email", "Role"])
+        self.tabla_usuarios.setColumnCount(3)  # Solo mostrar username, email y role
+        self.tabla_usuarios.setHorizontalHeaderLabels(["Username", "Email", "Role"])
         self.tabla_usuarios.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.tabla_usuarios.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.layout.addWidget(self.tabla_usuarios)
@@ -29,38 +30,109 @@ class GestionarUsuariosWindow(QDialog):
         self.btn_agregar.clicked.connect(self.agregar_usuario)
         self.layout.addWidget(self.btn_agregar)
 
+        self.btn_eliminar = QPushButton("Eliminar Usuario")
+        self.btn_eliminar.clicked.connect(self.eliminar_usuario)
+        self.layout.addWidget(self.btn_eliminar)
+
         self.setLayout(self.layout)
         self.cargar_usuarios()
 
     def cargar_usuarios(self):
         """Carga los usuarios desde la base de datos"""
-        usuarios = self.db.obtener_usuarios()
+        self.usuarios = self.db.obtener_usuarios()
         self.tabla_usuarios.setRowCount(0)
-        for usuario in usuarios:
+        for usuario in self.usuarios:
             row_position = self.tabla_usuarios.rowCount()
             self.tabla_usuarios.insertRow(row_position)
-            self.tabla_usuarios.setItem(row_position, 0, QTableWidgetItem(str(usuario[0])))
-            self.tabla_usuarios.setItem(row_position, 1, QTableWidgetItem(usuario[1]))
-            self.tabla_usuarios.setItem(row_position, 2, QTableWidgetItem(usuario[2]))
-            self.tabla_usuarios.setItem(row_position, 3, QTableWidgetItem(usuario[3]))
+            self.tabla_usuarios.setItem(row_position, 0, QTableWidgetItem(usuario[1]))  # username
+            self.tabla_usuarios.setItem(row_position, 1, QTableWidgetItem(usuario[2]))  # email
+            self.tabla_usuarios.setItem(row_position, 2, QTableWidgetItem(usuario[3]))  # role
 
     def agregar_usuario(self):
         """Agrega un nuevo usuario"""
-        username, ok_username = QInputDialog.getText(self, "Agregar Usuario", "Nombre de usuario:")
-        if not ok_username or not username:
-            return
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Agregar Usuario")
+        dialog.setGeometry(150, 150, 300, 200)
+        
+        layout = QVBoxLayout(dialog)
+        
+        username_label = QLabel("Nombre de usuario:")
+        username_input = QLineEdit()
+        layout.addWidget(username_label)
+        layout.addWidget(username_input)
+        
+        password_label = QLabel("Contraseña:")
+        password_input = QLineEdit()
+        password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        layout.addWidget(password_label)
+        layout.addWidget(password_input)
+        
+        email_label = QLabel("Correo electrónico:")
+        email_input = QLineEdit()
+        layout.addWidget(email_label)
+        layout.addWidget(email_input)
+        
+        role_label = QLabel("Rol:")
+        role_input = QComboBox()
+        role_input.addItems(["admin", "ayudante"])
+        layout.addWidget(role_label)
+        layout.addWidget(role_input)
+        
+        btn_guardar = QPushButton("Guardar")
+        btn_guardar.clicked.connect(lambda: self.guardar_usuario(dialog, username_input, password_input, email_input, role_input))
+        layout.addWidget(btn_guardar)
+        
+        dialog.setLayout(layout)
+        dialog.exec()
 
-        password, ok_password = QInputDialog.getText(self, "Agregar Usuario", "Contraseña:", QLineEdit.EchoMode.Password)
-        if not ok_password or not password:
+    def guardar_usuario(self, dialog, username_input, password_input, email_input, role_input):
+        """Guarda un nuevo usuario en la base de datos"""
+        username = username_input.text()
+        password = password_input.text()
+        email = email_input.text()
+        role = role_input.currentText()
+        
+        if not username or not password or not email:
+            QMessageBox.warning(self, "Error", "Todos los campos son obligatorios")
             return
-
-        email, ok_email = QInputDialog.getText(self, "Agregar Usuario", "Correo electrónico:")
-        if not ok_email or not email:
-            return
-
+        
         try:
-            self.db.agregar_usuario(username, password, email, "user")
+            self.db.agregar_usuario(username, password, email, role)
             QMessageBox.information(self, "Éxito", "Usuario agregado correctamente")
             self.cargar_usuarios()
+            dialog.accept()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Ocurrió un error al agregar el usuario: {str(e)}")
+
+    def eliminar_usuario(self):
+        """Elimina un usuario seleccionado"""
+        selected_row = self.tabla_usuarios.currentRow()
+        if selected_row >= 0:
+            user_id = self.usuarios[selected_row][0]  # Obtener el ID del usuario desde la lista de usuarios
+            
+            respuesta = QMessageBox.question(
+                self, "Confirmación",
+                "¿Estás seguro de que deseas eliminar este usuario?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if respuesta == QMessageBox.StandardButton.Yes:
+                # Solicitar la contraseña del administrador
+                admin_password, ok = QInputDialog.getText(self, "Confirmación de Administrador", "Ingresa la contraseña del administrador:", QLineEdit.EchoMode.Password)
+                if not ok or not admin_password:
+                    return
+
+                # Verificar la contraseña del administrador
+                admin_user = self.db.verificar_usuario("admin", admin_password)
+                if not admin_user:
+                    QMessageBox.warning(self, "Error", "Contraseña de administrador incorrecta.")
+                    return
+
+                try:
+                    self.db.eliminar_usuario(user_id)
+                    self.cargar_usuarios()
+                    QMessageBox.information(self, "Éxito", "Usuario eliminado correctamente.")
+                except Exception as e:
+                    QMessageBox.critical(self, "Error", f"Ocurrió un error al eliminar el usuario: {str(e)}")
+        else:
+            QMessageBox.warning(self, "Advertencia", "Selecciona un usuario para eliminar")

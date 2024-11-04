@@ -9,9 +9,10 @@ import re
 from models.database import Database
 
 class ContactosWindow(QDialog):
-    def __init__(self, db: Database):
+    def __init__(self, db: Database, user):
         super().__init__()
         self.db = db
+        self.user = user  # Guardar el usuario actual
         self.page_size = 10  # Cantidad de registros por página
         self.current_page = 1
         self.total_pages = 1
@@ -114,6 +115,10 @@ class ContactosWindow(QDialog):
         
         self.setLayout(self.layout)
         self.cargar_contactos()
+
+        # Deshabilitar el botón de eliminar si el usuario no es administrador
+        if self.user[4] != 'admin':
+            self.btn_eliminar.setDisabled(True)
 
     def validar_email(self, email):
         """Valida el formato del correo electrónico"""

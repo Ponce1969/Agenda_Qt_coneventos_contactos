@@ -5,16 +5,17 @@ from PyQt6.QtWidgets import (
     QMainWindow, QVBoxLayout, QWidget, QMessageBox,
     QCalendarWidget, QTableWidget, QTableWidgetItem, 
     QPushButton, QHBoxLayout, QTimeEdit, QLabel, 
-    QSplitter, QInputDialog, QToolBar
+    QSplitter, QInputDialog, QToolBar, QLineEdit
 )
 from PyQt6.QtCore import QDate, QTime, Qt, pyqtSlot
 from PyQt6.QtGui import QIcon
 from models.database import Database
 from features.alarma import Alarma
-from ui.ui_components import UIComponents # Importar la clase UIComponents desde ui_components.py
+from ui.ui_components import UIComponents
 from features.contactos import ContactosWindow
-from models.models import Evento             # Importar la clase Evento desde models.py
-from features.compras import ComprasWindow  # Importar la clase ComprasWindow
+from models.models import Evento
+from features.compras import ComprasWindow
+from auth.gestionar_usuarios import GestionarUsuariosWindow  # Importar la clase GestionarUsuariosWindow
 
 class AgendaApp(QMainWindow):
     def __init__(self, db: Database, user):
@@ -66,6 +67,11 @@ class AgendaApp(QMainWindow):
         self.btn_compras = QPushButton("Compras")
         self.btn_compras.clicked.connect(self.mostrar_compras)
         self.toolbar.addWidget(self.btn_compras)
+
+        # Añadir el botón de gestionar usuarios a la barra de herramientas
+        self.btn_gestionar_usuarios = QPushButton("Gestionar Usuarios")
+        self.btn_gestionar_usuarios.clicked.connect(self.gestionar_usuarios)
+        self.toolbar.addWidget(self.btn_gestionar_usuarios)
 
         # Crear una barra de herramientas adicional para el botón de mostrar/ocultar
         self.toggle_toolbar = QToolBar("Toggle Toolbar")
@@ -218,13 +224,23 @@ class AgendaApp(QMainWindow):
 
     @pyqtSlot()
     def mostrar_contactos(self):
-        self.contactos_window = ContactosWindow(self.db)
+        self.contactos_window = ContactosWindow(self.db, self.user)  # Pasar el usuario actual
         self.contactos_window.exec()
 
     @pyqtSlot()
     def mostrar_compras(self):
-        self.compras_window = ComprasWindow(self.db)
+        self.compras_window = ComprasWindow(self.db, self.user)  # Pasar el usuario actual
         self.compras_window.exec()
+
+    @pyqtSlot()
+    def gestionar_usuarios(self):
+        password, ok = QInputDialog.getText(self, "Contraseña de Administrador", "Ingresa tu contraseña:", QLineEdit.EchoMode.Password)
+        if ok and password:
+            if self.db.verificar_usuario(self.user[1], password):
+                self.gestionar_usuarios_window = GestionarUsuariosWindow(self.db)
+                self.gestionar_usuarios_window.exec()
+            else:
+                QMessageBox.warning(self, "Error", "Contraseña incorrecta")
 
     def actualizar_tabla(self):
         """Actualiza la tabla de eventos"""
@@ -242,4 +258,3 @@ class AgendaApp(QMainWindow):
             self.toolbar.hide()
         else:
             self.toolbar.show()
-

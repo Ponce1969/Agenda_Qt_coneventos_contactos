@@ -10,30 +10,6 @@ class Database:
     def create_tables(self):
         with self.conn:
             self.conn.execute("""
-                CREATE TABLE IF NOT EXISTS eventos (
-                    id INTEGER PRIMARY KEY,
-                    fecha_hora TEXT,
-                    descripcion TEXT
-                )
-            """)
-            self.conn.execute("""
-                CREATE TABLE IF NOT EXISTS contactos (
-                    id INTEGER PRIMARY KEY,
-                    nombre TEXT,
-                    telefono TEXT,
-                    email TEXT,
-                    documento TEXT
-                )
-            """)
-            self.conn.execute("""
-                CREATE TABLE IF NOT EXISTS compras (
-                    id INTEGER PRIMARY KEY,
-                    nombre TEXT,
-                    cantidad TEXT,
-                    precio TEXT
-                )
-            """)
-            self.conn.execute("""
                 CREATE TABLE IF NOT EXISTS usuarios (
                     id INTEGER PRIMARY KEY,
                     username TEXT UNIQUE,
@@ -48,6 +24,30 @@ class Database:
                     user_id INTEGER,
                     token TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS eventos (
+                    id INTEGER PRIMARY KEY,
+                    fecha_hora TEXT,
+                    descripcion TEXT
+                )
+            """)
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS compras (
+                    id INTEGER PRIMARY KEY,
+                    nombre TEXT,
+                    cantidad TEXT,
+                    precio TEXT
+                )
+            """)
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS contactos (
+                    id INTEGER PRIMARY KEY,
+                    nombre TEXT,
+                    telefono TEXT,
+                    email TEXT,
+                    documento TEXT
                 )
             """)
 
@@ -72,18 +72,10 @@ class Database:
                 return token
             return None
 
-    def verificar_token_recuperacion(self, token):
-        with self.conn:
-            reset = self.conn.execute("SELECT * FROM password_resets WHERE token = ?", (token,)).fetchone()
-            if reset:
-                return reset
-            return None
-    
     def hay_usuarios(self):
         with self.conn:
             result = self.conn.execute("SELECT COUNT(*) FROM usuarios").fetchone()
             return result[0] > 0
-
 
     def cambiar_contrasena(self, user_id, new_password):
         hashed_password = generate_password_hash(new_password)
@@ -93,6 +85,11 @@ class Database:
     def eliminar_usuario(self, user_id):
         with self.conn:
             self.conn.execute("DELETE FROM usuarios WHERE id = ?", (user_id,))
+
+    def obtener_usuarios(self):
+        """Obtiene todos los usuarios de la base de datos"""
+        with self.conn:
+            return self.conn.execute("SELECT id, username, email, role FROM usuarios").fetchall()
 
     def obtener_eventos(self):
         with self.conn:
@@ -150,6 +147,6 @@ class Database:
     def compra_duplicada(self, nombre):
         with self.conn:
             result = self.conn.execute("SELECT * FROM compras WHERE nombre = ?", (nombre,)).fetchone()
-            return result is not None    
+            return result is not None   
 
 

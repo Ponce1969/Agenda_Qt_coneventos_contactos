@@ -6,9 +6,10 @@ from PyQt6.QtCore import Qt
 from models.database import Database
 
 class ComprasWindow(QDialog):
-    def __init__(self, db: Database):
+    def __init__(self, db: Database, user):
         super().__init__()
         self.db = db
+        self.user = user  # Guardar el usuario actual
         self.initUI()
 
     def initUI(self):
@@ -68,6 +69,10 @@ class ComprasWindow(QDialog):
 
         self.setLayout(self.layout)
         self.cargar_compras()
+
+        # Deshabilitar el botón de eliminar si el usuario no es administrador
+        if self.user[4] != 'admin':
+            self.btn_eliminar.setDisabled(True)
 
     def cargar_compras(self):
         """Carga las compras desde la base de datos"""
