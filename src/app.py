@@ -1,11 +1,12 @@
 import sys
 from datetime import datetime
+import time
 from typing import List, Optional
 from PyQt6.QtWidgets import (
     QMainWindow, QVBoxLayout, QWidget, QMessageBox,
     QCalendarWidget, QTableWidget, QTableWidgetItem, 
     QPushButton, QHBoxLayout, QTimeEdit, QLabel, 
-    QSplitter, QInputDialog, QToolBar, QLineEdit
+    QSplitter, QInputDialog, QToolBar, QLineEdit, QFileDialog
 )
 from PyQt6.QtCore import QDate, QTime, Qt, pyqtSlot
 from PyQt6.QtGui import QIcon
@@ -16,18 +17,23 @@ from features.contactos import ContactosWindow
 from models.models import Evento
 from features.compras import ComprasWindow
 from auth.gestionar_usuarios import GestionarUsuariosWindow  # Importar la clase GestionarUsuariosWindow
+from  features.export_agenda import exportar_csv, exportar_json, exportar_xml, importar_csv, importar_json, importar_xml
+import csv
+import json
+import xml.etree.ElementTree as ET
 
 class AgendaApp(QMainWindow):
-    def __init__(self, db: Database, user):
-        super().__init__()
-        self.db = db
+    def __init__(self, db: Database, user):  # Pasar el usuario actual
+        super().__init__()  # Inicializar la clase base
+        self.db = db   # Guardar la instancia de la base de datos
         self.user = user  # Guardar el usuario actual
-        self.eventos: List[Evento] = []
-        self.ui_components = UIComponents(self)
-        self.initUI()
-        self.setupConnections()
-        self.cargar_eventos()
-        self.alarma = Alarma(self)
+        self.eventos: List[Evento] = []        # Lista para almacenar los eventos
+        self.ui_components = UIComponents(self) # Crear una instancia de UIComponents
+        self.initUI() # Inicializar la interfaz de usuario
+        self.setupConnections()# Configurar las conexiones de señales y slots
+        self.cargar_eventos()# Cargar los eventos desde la base de datos
+        self.alarma = Alarma(self)  # Crear instancia de Alarma
+        self.bloqueado_hasta = None  # Inicializar el tiempo de bloqueo
 
         # Cargar y aplicar el archivo QSS
         self.apply_stylesheet()
@@ -72,6 +78,16 @@ class AgendaApp(QMainWindow):
         self.btn_gestionar_usuarios = QPushButton("Gestionar Usuarios")
         self.btn_gestionar_usuarios.clicked.connect(self.gestionar_usuarios)
         self.toolbar.addWidget(self.btn_gestionar_usuarios)
+        
+        # Añadir el botón de exportar a la barra de herramientas
+        self.btn_exportar = QPushButton("Exportar")
+        self.btn_exportar.clicked.connect(self.exportar_datos)
+        self.toolbar.addWidget(self.btn_exportar)
+        
+        # Añadir el botón de importar a la barra de herramientas
+        self.btn_importar = QPushButton("Importar")
+        self.btn_importar.clicked.connect(self.importar_datos)
+        self.toolbar.addWidget(self.btn_importar)
 
         # Crear una barra de herramientas adicional para el botón de mostrar/ocultar
         self.toggle_toolbar = QToolBar("Toggle Toolbar")
@@ -232,15 +248,136 @@ class AgendaApp(QMainWindow):
         self.compras_window = ComprasWindow(self.db, self.user)  # Pasar el usuario actual
         self.compras_window.exec()
 
+
+
     @pyqtSlot()
     def gestionar_usuarios(self):
-        password, ok = QInputDialog.getText(self, "Contraseña de Administrador", "Ingresa tu contraseña:", QLineEdit.EchoMode.Password)
-        if ok and password:
-            if self.db.verificar_usuario(self.user[1], password):
-                self.gestionar_usuarios_window = GestionarUsuariosWindow(self.db)
+        # Obtener el rol del usuario actual desde alguna parte de tu aplicación
+        rol_usuario_actual = self.user[1]  # Asegúrate de tener esta información disponible
+
+        # Solicitar la contraseña del administrador
+        intentos_fallidos = 0
+
+        if self.bloqueado_hasta and time.time() < self.bloqueado_hasta:
+            tiempo_restante = int(self.bloqueado_hasta - time.time())
+            QMessageBox.warning(None, "Acceso Bloqueado", f"Acceso bloqueado. Intenta de nuevo en {tiempo_restante} segundos.")
+            return
+
+        while intentos_fallidos < 3:
+            admin_password, ok = QInputDialog.getText(None, "Contraseña de Administrador", "Ingresa la contraseña del administrador:", QLineEdit.EchoMode.Password)
+            if not ok or not admin_password:
+                return  # Cierra la ventana si no se proporciona la contraseña
+
+            # Verificar la contraseña del administrador
+            if self.db.verificar_contrasena_admin(admin_password):
+                self.gestionar_usuarios_window = GestionarUsuariosWindow(self.db, rol_usuario_actual)
                 self.gestionar_usuarios_window.exec()
-            else:
-                QMessageBox.warning(self, "Error", "Contraseña incorrecta")
+                return
+
+            intentos_fallidos += 1
+            QMessageBox.warning(None, "Error", "Contraseña de administrador incorrecta.")
+            
+            if intentos_fallidos >= 3:
+                self.bloqueado_hasta = time.time() + 480  # Bloquear por 8 minutos
+                QMessageBox.warning(None, "Error", "Ha excedido el número máximo de intentos. Acceso bloqueado por 8 minutos.")
+                return  # Deshabilita el campo de entrada de la contraseña
+
+        # Si se alcanzan los intentos fallidos, deshabilitar el campo de entrada de la contraseña
+        if intentos_fallidos >= 3:
+            self.bloqueado_hasta = time.time() + 480  # Bloquear por 8 minutos
+            QMessageBox.warning(None, "Error", "Ha excedido el número máximo de intentos. Acceso bloqueado por 8 minutos.")
+     
+        
+         
+         
+    @pyqtSlot()
+    def exportar_datos(self):
+        """Exporta los datos a un archivo seleccionado por el usuario"""
+        archivo, _ = QFileDialog.getSaveFileName(self, "Guardar Archivo", "", "CSV Files (*.csv);;JSON Files (*.json);;XML Files (*.xml)")
+        if archivo:
+            if archivo.endswith('.csv'):
+                self.exportar_csv(archivo)
+            elif archivo.endswith('.json'):
+                self.exportar_json(archivo)
+            elif archivo.endswith('.xml'):
+                self.exportar_xml(archivo)
+                
+                
+    @pyqtSlot()
+    def importar_datos(self):
+        """Importa los datos desde un archivo seleccionado por el usuario"""
+        archivo, _ = QFileDialog.getOpenFileName(self, "Abrir Archivo", "", "CSV Files (*.csv);;JSON Files (*.json);;XML Files (*.xml)")
+        if archivo:
+            if archivo.endswith('.csv'):
+                self.importar_csv(archivo)
+            elif archivo.endswith('.json'):
+                self.importar_json(archivo)
+            elif archivo.endswith('.xml'):
+                self.importar_xml(archivo)
+    
+
+    def exportar_csv(self, archivo):
+        """Exporta los datos a un archivo CSV"""
+        with open(archivo, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["ID", "Fecha", "Hora", "Descripción"])
+            for evento in self.eventos:
+                writer.writerow([evento.id, evento.fecha_hora.strftime('%Y-%m-%d'), evento.fecha_hora.strftime('%H:%M'), evento.descripcion])
+
+    def importar_csv(self, archivo):
+        """Importa los datos desde un archivo CSV"""
+        with open(archivo, 'r') as file:
+            reader = csv.reader(file)
+            next(reader)  # Saltar la cabecera
+            for row in reader:
+                fecha_hora = datetime.strptime(f"{row[1]} {row[2]}", '%Y-%m-%d %H:%M')
+                self.db.agregar_evento(row[1], row[2], row[3])
+                nuevo_evento_id = self.db.obtener_eventos()[-1][0]
+                nuevo_evento = Evento(nuevo_evento_id, fecha_hora, row[3])
+                self.eventos.append(nuevo_evento)
+            self.actualizar_tabla()
+
+    def exportar_json(self, archivo):
+        """Exporta los datos a un archivo JSON"""
+        eventos = [{"id": evento.id, "fecha": evento.fecha_hora.strftime('%Y-%m-%d'), "hora": evento.fecha_hora.strftime('%H:%M'), "descripcion": evento.descripcion} for evento in self.eventos]
+        with open(archivo, 'w') as file:
+            json.dump(eventos, file, indent=4)
+
+    def importar_json(self, archivo):
+        """Importa los datos desde un archivo JSON"""
+        with open(archivo, 'r') as file:
+            eventos = json.load(file)
+            for evento in eventos:
+                fecha_hora = datetime.strptime(f"{evento['fecha']} {evento['hora']}", '%Y-%m-%d %H:%M')
+                self.db.agregar_evento(evento['fecha'], evento['hora'], evento['descripcion'])
+                nuevo_evento_id = self.db.obtener_eventos()[-1][0]
+                nuevo_evento = Evento(nuevo_evento_id, fecha_hora, evento['descripcion'])
+                self.eventos.append(nuevo_evento)
+            self.actualizar_tabla()
+
+    def exportar_xml(self, archivo):
+        """Exporta los datos a un archivo XML"""
+        root = ET.Element("eventos")
+        for evento in self.eventos:
+            evento_element = ET.SubElement(root, "evento")
+            ET.SubElement(evento_element, "id").text = str(evento.id)
+            ET.SubElement(evento_element, "fecha").text = evento.fecha_hora.strftime('%Y-%m-%d')
+            ET.SubElement(evento_element, "hora").text = evento.fecha_hora.strftime('%H:%M')
+            ET.SubElement(evento_element, "descripcion").text = evento.descripcion
+        tree = ET.ElementTree(root)
+        tree.write(archivo)
+
+    def importar_xml(self, archivo):
+        """Importa los datos desde un archivo XML"""
+        tree = ET.parse(archivo)
+        root = tree.getroot()
+        for evento_element in root.findall('evento'):
+            fecha_hora = datetime.strptime(f"{evento_element.find('fecha').text} {evento_element.find('hora').text}", '%Y-%m-%d %H:%M')
+            self.db.agregar_evento(evento_element.find('fecha').text, evento_element.find('hora').text, evento_element.find('descripcion').text)
+            nuevo_evento_id = self.db.obtener_eventos()[-1][0]
+            nuevo_evento = Evento(nuevo_evento_id, fecha_hora, evento_element.find('descripcion').text)
+            self.eventos.append(nuevo_evento)
+        self.actualizar_tabla()
 
     def actualizar_tabla(self):
         """Actualiza la tabla de eventos"""

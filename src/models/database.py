@@ -63,6 +63,20 @@ class Database:
                 return user
             return None
 
+    def verificar_contrasena_admin(self, password):
+        with self.conn:
+            admin_user = self.conn.execute("SELECT * FROM usuarios WHERE role = 'admin'").fetchone()
+            if admin_user and check_password_hash(admin_user[2], password):
+                return True
+            return False
+
+    def verificar_permiso(self, username):
+        with self.conn:
+            user = self.conn.execute("SELECT role FROM usuarios WHERE username = ?", (username,)).fetchone()
+            if user and user[0] == 'admin':
+                return True
+            return False
+
     def generar_token_recuperacion(self, email):
         with self.conn:
             user = self.conn.execute("SELECT * FROM usuarios WHERE email = ?", (email,)).fetchone()
@@ -147,6 +161,6 @@ class Database:
     def compra_duplicada(self, nombre):
         with self.conn:
             result = self.conn.execute("SELECT * FROM compras WHERE nombre = ?", (nombre,)).fetchone()
-            return result is not None   
+            return result is not None
 
 

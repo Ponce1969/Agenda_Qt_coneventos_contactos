@@ -1,13 +1,15 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, 
-    QTableWidget, QTableWidgetItem, QMessageBox, QInputDialog, QHBoxLayout, QComboBox
+    QTableWidget, QTableWidgetItem, QMessageBox, QInputDialog, QComboBox
 )
 from models.database import Database
+import time
 
 class GestionarUsuariosWindow(QDialog):
-    def __init__(self, db: Database):
+    def __init__(self, db: Database, rol_usuario: str):
         super().__init__()
         self.db = db
+        self.rol_usuario = rol_usuario  # Almacena el rol del usuario logeado
         self.usuarios = []  # Lista para almacenar los usuarios
         self.initUI()
 
@@ -37,6 +39,13 @@ class GestionarUsuariosWindow(QDialog):
         self.setLayout(self.layout)
         self.cargar_usuarios()
 
+    def tiene_permiso(self):
+        """Verifica si el usuario actual tiene permisos de administrador"""
+        if self.rol_usuario != "admin":
+            QMessageBox.warning(self, "Acceso Denegado", "Solo los administradores pueden realizar esta acción.")
+            return False
+        return True
+
     def cargar_usuarios(self):
         """Carga los usuarios desde la base de datos"""
         self.usuarios = self.db.obtener_usuarios()
@@ -50,6 +59,9 @@ class GestionarUsuariosWindow(QDialog):
 
     def agregar_usuario(self):
         """Agrega un nuevo usuario"""
+        if not self.tiene_permiso():
+            return
+
         dialog = QDialog(self)
         dialog.setWindowTitle("Agregar Usuario")
         dialog.setGeometry(150, 150, 300, 200)
@@ -106,6 +118,9 @@ class GestionarUsuariosWindow(QDialog):
 
     def eliminar_usuario(self):
         """Elimina un usuario seleccionado"""
+        if not self.tiene_permiso():
+            return
+
         selected_row = self.tabla_usuarios.currentRow()
         if selected_row >= 0:
             user_id = self.usuarios[selected_row][0]  # Obtener el ID del usuario desde la lista de usuarios
@@ -123,8 +138,7 @@ class GestionarUsuariosWindow(QDialog):
                     return
 
                 # Verificar la contraseña del administrador
-                admin_user = self.db.verificar_usuario("admin", admin_password)
-                if not admin_user:
+                if not self.db.verificar_contrasena_admin(admin_password):
                     QMessageBox.warning(self, "Error", "Contraseña de administrador incorrecta.")
                     return
 
@@ -136,3 +150,5 @@ class GestionarUsuariosWindow(QDialog):
                     QMessageBox.critical(self, "Error", f"Ocurrió un error al eliminar el usuario: {str(e)}")
         else:
             QMessageBox.warning(self, "Advertencia", "Selecciona un usuario para eliminar")
+            
+

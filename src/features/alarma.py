@@ -46,7 +46,7 @@ class Alarma(QDialog):
             # Comprobar si queda 1 hora para el evento y reproducir la alarma
             if timedelta(minutes=59) < diferencia <= timedelta(hours=1):
                 self.mostrar_aviso(f"Queda 1 hora para tu evento: {evento.descripcion}")
-                self.reproducir_alarma()
+                self.reproducir_alarma(evento.descripcion)
             
             # Comprobar si queda 15 minutos para el evento
             elif timedelta(minutes=14) < diferencia <= timedelta(minutes=15):
@@ -55,13 +55,14 @@ class Alarma(QDialog):
             # Comprobar si es la hora del evento
             elif timedelta(seconds=0) <= diferencia <= timedelta(minutes=1):
                 self.mostrar_aviso(f"Es la hora del evento: {evento.descripcion}")
+                self.reproducir_alarma(evento.descripcion, es_hora_del_evento=True)
     
     def mostrar_aviso(self, mensaje):
         """Muestra una advertencia con un mensaje."""
         # logging.info(f"Mostrando aviso: {mensaje}")
         QMessageBox.warning(self, "Recordatorio de Evento", mensaje, QMessageBox.StandardButton.Ok)
 
-    def reproducir_alarma(self, descripcion_evento):
+    def reproducir_alarma(self, descripcion_evento, es_hora_del_evento=False):
         """Reproduce el sonido de la alarma y muestra un aviso."""
         # logging.info(f"Reproduciendo alarma para el evento: {descripcion_evento}")
         try:
@@ -70,7 +71,8 @@ class Alarma(QDialog):
             # logging.error(f"Error al reproducir el sonido de la alarma: {e}")
             QMessageBox.warning(self, "Error", "No se pudo reproducir el sonido de la alarma.")
         
-        QMessageBox.information(self, "Alarma de Evento", f"Es la hora del evento: {descripcion_evento}", QMessageBox.StandardButton.Ok)
+        if es_hora_del_evento:
+            QMessageBox.information(self, "Alarma de Evento", f"Es la hora del evento: {descripcion_evento}", QMessageBox.StandardButton.Ok)
 
     def cargar_tareas(self):
         """Carga las tareas del día en la lista."""
@@ -86,7 +88,8 @@ class Alarma(QDialog):
         self.cargar_tareas()
 
     def closeEvent(self, event):
-        """Sobrescribe el evento de cierre para actualizar la lista de tareas al reabrir."""
+        """Sobrescribe el evento de cierre para actualizar la lista de tareas al reabrir y mostrar un mensaje de confirmación."""
         self.cargar_tareas()
+        QMessageBox.information(self, "Alarma Configurada", "La alarma ha sido configurada y está activa.", QMessageBox.StandardButton.Ok)
         super().closeEvent(event)
 
