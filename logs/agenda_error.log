@@ -1,1 +1,19 @@
 
+2024-11-12 23:40:11,566 - root - ERROR - Error crítico en la aplicación: 'AgendaApp' object has no attribute 'exportar_datos'
+Traceback (most recent call last):
+  File "/home/gonzapython/Documentos/Agenda_qt/src/main.py", line 118, in main
+    ventana = AgendaApp(db, user)
+  File "/home/gonzapython/Documentos/Agenda_qt/src/app.py", line 32, in __init__
+    self.initUI() # Inicializar la interfaz de usuario
+  File "/home/gonzapython/Documentos/Agenda_qt/src/app.py", line 84, in initUI
+    self.btn_exportar.clicked.connect(self.exportar_datos)
+AttributeError: 'AgendaApp' object has no attribute 'exportar_datos'
+2024-11-12 23:50:37,924 - root - ERROR - Error crítico en la aplicación: 'AgendaApp' object has no attribute 'exportar_datos'
+Traceback (most recent call last):
+  File "/home/gonzapython/Documentos/Agenda_qt/src/main.py", line 118, in main
+    ventana = AgendaApp(db, user)
+  File "/home/gonzapython/Documentos/Agenda_qt/src/app.py", line 36, in __init__
+    self.initUI() # Inicializar la interfaz de usuario
+  File "/home/gonzapython/Documentos/Agenda_qt/src/app.py", line 88, in initUI
+    self.btn_exportar.clicked.connect(self.exportar_datos)
+AttributeError: 'AgendaApp' object has no attribute 'exportar_datos'
